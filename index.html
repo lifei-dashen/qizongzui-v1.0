@@ -1,0 +1,737 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+   <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>七宗罪灵魂原罪测试 | The Seven Deadly Sins</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        :root {
+            --bg-color: #000000;
+            --card-bg: rgba(28, 28, 30, 0.6);
+            --card-border: rgba(255, 255, 255, 0.1);
+            --accent-color: #8E44AD; /* 默认主色，JS会根据结果改变 */
+            --text-main: #f5f5f7;
+            --text-sec: #86868b;
+            --font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            background-color: var(--bg-color);
+            color: var(--text-main);
+            font-family: var(--font-family);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            overflow-x: hidden;
+            background-image: radial-gradient(circle at 50% 10%, #1a1a1a 0%, #000000 60%);
+        }
+
+        /* 通用容器 */
+        .container {
+            width: 100%;
+            max-width: 600px;
+            padding: 20px;
+            position: relative;
+        }
+
+        /* 动画类 */
+        .fade-in { animation: fadeIn 0.8s ease forwards; }
+        .slide-up { animation: slideUp 0.6s ease cubic-bezier(0.2, 0.8, 0.2, 1); }
+        .hidden { display: none !important; }
+
+        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+        @keyframes slideUp { from { transform: translateY(30px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+
+        /* 1. 兑换码页面 */
+        #gate-screen {
+            text-align: center;
+            padding: 40px 20px;
+        }
+        .gate-card {
+            background: var(--card-bg);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            border: 1px solid var(--card-border);
+            padding: 40px;
+            border-radius: 24px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.4);
+        }
+        .title { font-size: 24px; font-weight: 700; letter-spacing: 2px; margin-bottom: 10px; text-transform: uppercase; }
+        .subtitle { font-size: 14px; color: var(--text-sec); margin-bottom: 30px; }
+        
+        input[type="text"] {
+            width: 100%;
+            background: rgba(0,0,0,0.3);
+            border: 1px solid #333;
+            color: #fff;
+            padding: 16px;
+            font-size: 18px;
+            border-radius: 12px;
+            outline: none;
+            text-align: center;
+            letter-spacing: 4px;
+            transition: all 0.3s;
+            margin-bottom: 20px;
+        }
+        input[type="text"]:focus { border-color: #666; background: rgba(0,0,0,0.5); }
+        
+        .btn {
+            background: #fff;
+            color: #000;
+            border: none;
+            padding: 16px 32px;
+            font-size: 16px;
+            font-weight: 600;
+            border-radius: 30px;
+            cursor: pointer;
+            transition: transform 0.2s, opacity 0.2s;
+            width: 100%;
+        }
+        .btn:active { transform: scale(0.98); opacity: 0.9; }
+        .error-msg { color: #ff453a; font-size: 13px; margin-top: 10px; min-height: 20px; opacity: 0; transition: opacity 0.3s; }
+
+        /* 2. 测试页面 */
+        #quiz-screen { text-align: left; }
+        .progress-bar {
+            width: 100%;
+            height: 4px;
+            background: #333;
+            border-radius: 2px;
+            margin-bottom: 30px;
+            overflow: hidden;
+        }
+        .progress-fill {
+            height: 100%;
+            background: #fff;
+            width: 0%;
+            transition: width 0.4s ease;
+        }
+        .question-card {
+            margin-bottom: 20px;
+        }
+        .q-count { color: var(--text-sec); font-size: 13px; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 8px; }
+        .q-text { font-size: 22px; font-weight: 600; line-height: 1.4; margin-bottom: 30px; }
+        
+        .options-grid { display: flex; flex-direction: column; gap: 12px; }
+        .option-btn {
+            background: rgba(255,255,255,0.08);
+            border: 1px solid transparent;
+            color: var(--text-main);
+            padding: 18px 20px;
+            border-radius: 16px;
+            text-align: left;
+            font-size: 16px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        .option-btn:hover { background: rgba(255,255,255,0.15); }
+        .option-btn:active { transform: scale(0.99); }
+
+        /* 3. 结果页面 */
+        #result-screen { padding-bottom: 50px; }
+        .result-header { text-align: center; margin-bottom: 30px; }
+        .sin-badge {
+            display: inline-block;
+            padding: 6px 16px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 700;
+            letter-spacing: 1px;
+            text-transform: uppercase;
+            margin-bottom: 15px;
+            background: rgba(255,255,255,0.1);
+            border: 1px solid rgba(255,255,255,0.2);
+        }
+        .sin-title { 
+            font-size: 42px; 
+            font-weight: 800; 
+            margin-bottom: 10px; 
+            background: -webkit-linear-gradient(45deg, #fff, #888);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+        .sin-desc { color: var(--text-sec); font-size: 15px; line-height: 1.6; max-width: 90%; margin: 0 auto; }
+
+        /* 图表容器 */
+        .chart-container {
+            position: relative;
+            height: 300px;
+            width: 100%;
+            margin: 30px 0;
+            background: rgba(255,255,255,0.03);
+            border-radius: 20px;
+            padding: 10px;
+        }
+
+        /* 救赎卡片 (白底反转) */
+        .redemption-card {
+            background: #f5f5f7;
+            color: #1c1c1e;
+            padding: 30px;
+            border-radius: 24px;
+            margin-top: 30px;
+            text-align: center;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+        }
+        .redemption-label { font-size: 12px; font-weight: 700; opacity: 0.6; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 8px; }
+        .virtue-title { font-size: 28px; font-weight: 800; margin-bottom: 12px; color: #000; }
+        .virtue-text { font-size: 15px; line-height: 1.6; opacity: 0.8; }
+
+       /* --- 修改后的底部样式 --- */
+        .footer {
+            margin-top: 40px;
+            text-align: center;
+            padding-bottom: 20px; /* 增加底部留白，适应全面屏手机 */
+        }
+        
+        /* 按钮容器：让两个按钮并排 */
+        .btn-group {
+            display: flex;
+            justify-content: center;
+            gap: 15px; /* 按钮之间的间距 */
+            margin-bottom: 25px;
+        }
+
+        .retry-btn {
+            background: transparent;
+            border: 1px solid #444;
+            color: #888;
+            padding: 10px 24px;
+            border-radius: 20px;
+            font-size: 14px;
+            cursor: pointer;
+            transition: all 0.2s;
+            min-width: 100px; /* 保证按钮宽度统一 */
+        }
+
+        /* 新增：分享按钮样式 (高亮一点) */
+        .share-btn {
+            border-color: var(--text-main);
+            color: var(--text-main);
+            background: rgba(255,255,255,0.1);
+        }
+        
+        /* 新增：版权文字样式 */
+        .copyright {
+            font-size: 12px !important;
+            color: #999999; 
+            line-height: 1.6;
+            letter-spacing: 1px;
+        }
+
+    </style>
+</head>
+<body>
+
+    <div class="container">
+        
+        <div id="gate-screen" class="slide-up">
+            <div class="gate-card">
+                <div class="title">Seven Deadly Sins</div>
+                <div class="subtitle">七宗罪灵魂原罪测试 v1.0</div>
+                <div style="margin: 30px 0; height: 1px; background: rgba(255,255,255,0.1);"></div>
+                <p style="margin-bottom: 20px; font-size: 14px; color: #bbb;">请输入访问密钥以连接深层意识</p>
+                <input type="text" id="access-code" placeholder="ENTER CODE" maxlength="6">
+                <button class="btn" onclick="checkCode()">解锁测试</button>
+                <div class="error-msg" id="error-msg">无效的访问密钥</div>
+            </div>
+        </div>
+
+        <div id="quiz-screen" class="hidden">
+            <div class="progress-bar"><div class="progress-fill" id="progress"></div></div>
+            <div id="question-container" class="slide-up">
+                </div>
+        </div>
+
+        <div id="result-screen" class="hidden">
+            <div class="result-header slide-up">
+                <div class="sin-badge" id="result-badge">PRIMARY SIN</div>
+                <div class="sin-title" id="result-title"></div>
+                <p class="sin-desc" id="result-desc"></p>
+            </div>
+
+            <div class="chart-container slide-up" style="animation-delay: 0.2s;">
+                <canvas id="radarChart"></canvas>
+            </div>
+
+            <div class="redemption-card slide-up" style="animation-delay: 0.4s;">
+                <div class="redemption-label">SOUL REMEDY</div>
+                <div class="virtue-title" id="virtue-title"></div>
+                <p class="virtue-text" id="virtue-desc"></p>
+            </div>
+
+            <div class="footer slide-up" style="animation-delay: 0.6s;">
+                <div class="btn-group">
+                    <button class="retry-btn" onclick="location.reload()">重新测试</button>
+                    <button class="retry-btn share-btn" onclick="shareResult()">分享结果</button>
+                </div>
+                
+                <div class="copyright">
+                    <div>© 2026 心灵驿站. 版权所有<br>为灵魂探索而设计，结果仅供参考，请理性对待</div>
+                    
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+    <script>
+        // --- 配置区 ---
+        const VALID_CODE = "9195"; // 兑换码设置
+        
+        // --- 21道题目 (3题对应1个原罪，加权逻辑) ---
+        // types: pride, envy, wrath, sloth, greed, gluttony, lust
+        const questions = [
+            // PRIDE (1-3)
+            {
+                q: "当你在团队中取得巨大成功时，你内心的真实独白是？",
+                type: "pride",
+                options: [
+                    { text: "这是大家共同努力的结果，我很感激。", score: 0 },
+                    { text: "还不错，但我知道我可以做得更好。", score: 3 },
+                    { text: "没了我，这帮人什么都做不成。", score: 5 }
+                ]
+            },
+            {
+                q: "被别人当面指出你的错误时，你的第一反应是？",
+                type: "pride",
+                options: [
+                    { text: "立刻反驳，觉得对方在针对我。", score: 5 },
+                    { text: "表面接受，心里觉得对方没资格评判我。", score: 3 },
+                    { text: "认真思考，如果是对的就改正。", score: 0 }
+                ]
+            },
+            {
+                q: "你对“平庸”这个词的看法是？",
+                type: "pride",
+                options: [
+                    { text: "大多数人的常态，可以接受。", score: 0 },
+                    { text: "我绝对不能忍受自己是平庸的。", score: 5 },
+                    { text: "有时候平庸也是一种福气。", score: 1 }
+                ]
+            },
+            
+            // ENVY (4-6)
+            {
+                q: "刷朋友圈看到同龄人晒豪车或高升，你会？",
+                type: "envy",
+                options: [
+                    { text: "感到一阵刺痛，为什么那个人不是我？", score: 5 },
+                    { text: "有点酸，但也觉得那是人家应得的。", score: 2 },
+                    { text: "无所谓，每个人的生活节奏不同。", score: 0 }
+                ]
+            },
+            {
+                q: "你是否经常暗自拿自己和朋友比较？",
+                type: "envy",
+                options: [
+                    { text: "几乎不，我只关注自己。", score: 0 },
+                    { text: "偶尔会，特别是他们过得好的时候。", score: 3 },
+                    { text: "经常，这让我感到焦虑和痛苦。", score: 5 }
+                ]
+            },
+            {
+                q: "得知讨厌的人倒霉了，你的心情是？",
+                type: "envy",
+                options: [
+                    { text: "极度舒适，甚至想开香槟。", score: 5 },
+                    { text: "有点小确幸，但不会表现出来。", score: 3 },
+                    { text: "没什么特别的感觉。", score: 0 }
+                ]
+            },
+
+            // WRATH (7-9)
+            {
+                q: "遇到网络喷子或现实中不讲理的人，你会？",
+                type: "wrath",
+                options: [
+                    { text: "无视，不与傻瓜论长短。", score: 0 },
+                    { text: "怼回去，但点到为止。", score: 2 },
+                    { text: "怒火中烧，必须骂赢为止，甚至想动手。", score: 5 }
+                ]
+            },
+            {
+                q: "当事情脱离你的控制时，你会感到？",
+                type: "wrath",
+                options: [
+                    { text: "极其暴躁，想摔东西发泄。", score: 5 },
+                    { text: "有些烦躁，需要深呼吸调整。", score: 3 },
+                    { text: "冷静分析原因，寻找解决方案。", score: 0 }
+                ]
+            },
+            {
+                q: "你认为“复仇”是必要的吗？",
+                type: "wrath",
+                options: [
+                    { text: "冤冤相报何时了。", score: 0 },
+                    { text: "君子报仇，十年不晚。", score: 3 },
+                    { text: "必须的，有仇不报非君子，且要加倍奉还。", score: 5 }
+                ]
+            },
+
+            // SLOTH (10-12)
+            {
+                q: "对于原本计划好但有些难度的任务，你通常会？",
+                type: "sloth",
+                options: [
+                    { text: "立刻开始，按部就班。", score: 0 },
+                    { text: "拖到最后期限前一晚通宵搞定。", score: 3 },
+                    { text: "能不做就不做，或者找借口推掉。", score: 5 }
+                ]
+            },
+            {
+                q: "周日早晨醒来，你最理想的状态是？",
+                type: "sloth",
+                options: [
+                    { text: "赖在床上直到饿得受不了，除了刷手机什么都不干。", score: 5 },
+                    { text: "睡个懒觉，然后起来做点轻松的事。", score: 2 },
+                    { text: "早起晨练，享受清晨时光。", score: 0 }
+                ]
+            },
+            {
+                q: "你对“努力”这个概念的潜意识看法是？",
+                type: "sloth",
+                options: [
+                    { text: "改变命运的唯一途径。", score: 0 },
+                    { text: "太累了，如果能躺赢该多好。", score: 5 },
+                    { text: "必要，但也需要适度休息。", score: 2 }
+                ]
+            },
+
+            // GREED (13-15)
+            {
+                q: "如果突然获得一笔巨款，你会？",
+                type: "greed",
+                options: [
+                    { text: "捐出一部分，剩下的改善生活。", score: 0 },
+                    { text: "存起来或投资，看着数字增长让我兴奋。", score: 3 },
+                    { text: "想办法用这笔钱赚更多的钱，永远不嫌多。", score: 5 }
+                ]
+            },
+            {
+                q: "你是否经常购买其实并不急需，但看起来很值钱的东西？",
+                type: "greed",
+                options: [
+                    { text: "是的，占有这些东西让我有安全感。", score: 5 },
+                    { text: "偶尔冲动消费。", score: 2 },
+                    { text: "我是极简主义者。", score: 0 }
+                ]
+            },
+            {
+                q: "在利益面前，你会为了更大的份额而牺牲人情吗？",
+                type: "greed",
+                options: [
+                    { text: "人情比利益重要。", score: 0 },
+                    { text: "看情况，如果利益足够大可能会。", score: 3 },
+                    { text: "人不为己天诛地灭，利益至上。", score: 5 }
+                ]
+            },
+
+            // GLUTTONY (16-18)
+            {
+                q: "面对无限量的美食自助，你会？",
+                type: "gluttony",
+                options: [
+                    { text: "吃到刚刚好饱。", score: 0 },
+                    { text: "吃到有点撑，毕竟付了钱。", score: 2 },
+                    { text: "吃到嗓子眼，完全停不下来，享受吞咽的快感。", score: 5 }
+                ]
+            },
+            {
+                q: "心情不好或者压力大时，你会？",
+                type: "gluttony",
+                options: [
+                    { text: "暴饮暴食，或者疯狂购物/刷剧来麻痹自己。", score: 5 },
+                    { text: "找朋友倾诉。", score: 1 },
+                    { text: "运动或冥想。", score: 0 }
+                ]
+            },
+            {
+                q: "你是否过度沉溺于某种感官享受（不限于食物，如游戏、酒精）？",
+                type: "gluttony",
+                options: [
+                    { text: "是的，我很难控制这种欲望。", score: 5 },
+                    { text: "有时候会放纵一下。", score: 2 },
+                    { text: "我很自律。", score: 0 }
+                ]
+            },
+
+            // LUST (19-21)
+            {
+                q: "在一段关系中，身体的契合度对你来说？",
+                type: "lust",
+                options: [
+                    { text: "是灵魂交流的基础，至关重要。", score: 3 },
+                    { text: "是最核心的追求，没有激情的爱是枯燥的。", score: 5 },
+                    { text: "重要，但精神共鸣更重要。", score: 1 }
+                ]
+            },
+            {
+                q: "走在街上看到极具吸引力的异性，你会？",
+                type: "lust",
+                options: [
+                    { text: "欣赏一下美。", score: 1 },
+                    { text: "产生强烈的幻想和渴望。", score: 5 },
+                    { text: "没太大反应。", score: 0 }
+                ]
+            },
+            {
+                q: "你渴望那种具有危险气息、甚至禁忌的亲密关系吗？",
+                type: "lust",
+                options: [
+                    { text: "非常渴望，那让我感到活着。", score: 5 },
+                    { text: "有点好奇，但不敢尝试。", score: 2 },
+                    { text: "完全不感兴趣，喜欢平稳。", score: 0 }
+                ]
+            }
+        ];
+
+        // --- 结果文案库 ---
+        const resultsData = {
+            pride: {
+                title: "傲慢 (Pride)",
+                color: "#9b59b6",
+                desc: "你的灵魂深处住着一个国王。你对自己有极高的标准，这种完美主义让你出类拔萃，但也筑起了一道高墙。你害怕展示脆弱，因为在你看来，那是无能的表现。你渴望被看见，更渴望被崇拜。",
+                virtueTitle: "谦逊 (Humility)",
+                virtueDesc: "尝试承认自己的局限性。真正的强大不是从不跌倒，而是允许自己不完美。试着去赞美他人，你会发现世界比你想象的更广阔。"
+            },
+            envy: {
+                title: "嫉妒 (Envy)",
+                color: "#2ecc71",
+                desc: "你拥有一双敏锐的眼睛，总能看到别人拥有而你缺失的美好。这种比较心是你的动力，也是你痛苦的根源。你常常觉得世界不公，内心深处渴望被命运偏爱。",
+                virtueTitle: "感恩 (Kindness)",
+                virtueDesc: "停止向外张望，开始向内审视。你拥有的价值是独一无二的。试着为他人的成功感到高兴，因为那是人类可能性的证明，而非对你的剥夺。"
+            },
+            wrath: {
+                title: "暴怒 (Wrath)",
+                color: "#e74c3c",
+                desc: "你的内心燃烧着烈火。你对正义和秩序有着偏执的追求，一旦事情失控或受到侵犯，愤怒是你最直接的防御武器。这股力量强大而极具破坏性，既能烧毁敌人，也能灼伤自己。",
+                virtueTitle: "耐心 (Patience)",
+                virtueDesc: "深呼吸。愤怒往往是无力感的伪装。学会接纳不可控的事物，原谅他人的愚蠢。真正的力量在于控制情绪，而不是被情绪控制。"
+            },
+            sloth: {
+                title: "懒惰 (Sloth)",
+                color: "#3498db",
+                desc: "你可能看透了世俗忙碌的虚无。你追求舒适，习惯逃避压力和困难。这不是身体的疲惫，而是灵魂的沉睡。你有天赋，但往往缺乏将其兑现的动力。",
+                virtueTitle: "勤勉 (Diligence)",
+                virtueDesc: "行动是治愈恐惧和空虚的良药。不需要宏大的计划，从做一件小事开始。投入到创造中去，你会发现沉浸在行动中的快乐远胜于躺平。"
+            },
+            greed: {
+                title: "贪婪 (Greed)",
+                color: "#f1c40f",
+                desc: "你是一个进取者，但这种进取可能变成了无底洞。你通过占有资源（金钱、物品、权力）来获取安全感。然而，无论拥有多少，内心的那个空洞似乎永远填不满。",
+                virtueTitle: "慷慨 (Charity)",
+                virtueDesc: "试着给予。给予不会让你贫穷，反而会让你感到丰盈。安全感不来源于抓紧，而来源于即使松手也相信自己能活得很好的自信。"
+            },
+            gluttony: {
+                title: "暴食 (Gluttony)",
+                color: "#e67e22",
+                desc: "不仅仅是食物，你对感官享受有着过度的渴求。你试图用物质的填塞来对抗内心的空虚或焦虑。你是一个享乐主义者，但过度放纵让你失去了对生活的真正品味。",
+                virtueTitle: "节制 (Temperance)",
+                virtueDesc: "少即是多。学会延迟满足，你会发现克制带来的快感比放纵更持久、更高级。通过精神层面的滋养来填补空虚，而非物质。"
+            },
+            lust: {
+                title: "色欲 (Lust)",
+                color: "#e84393",
+                desc: "你渴望深度的连接和激情的燃烧。这种渴望极其强烈，有时会让你迷失自我，将他人物化为满足欲望的对象。你追求极度的体验，却可能忽略了平淡中的真情。",
+                virtueTitle: "纯洁 (Chastity)",
+                virtueDesc: "升华你的欲望。将这股强大的生命力转化为创造力或更深层次的情感连接。学会尊重界限，追求灵与肉的统一，而非单纯的感官刺激。"
+            }
+        };
+
+        // --- 逻辑处理 ---
+        let currentQuestionIndex = 0;
+        let scores = {
+            pride: 0, envy: 0, wrath: 0, sloth: 0, greed: 0, gluttony: 0, lust: 0
+        };
+
+        // 1. 检查兑换码
+        function checkCode() {
+            const input = document.getElementById('access-code').value;
+            const errMsg = document.getElementById('error-msg');
+            
+            if (input === VALID_CODE) {
+                document.getElementById('gate-screen').classList.add('hidden');
+                document.getElementById('quiz-screen').classList.remove('hidden');
+                renderQuestion();
+            } else {
+                errMsg.style.opacity = '1';
+                setTimeout(() => errMsg.style.opacity = '0', 2000);
+            }
+        }
+
+        // 2. 渲染题目
+        function renderQuestion() {
+            const container = document.getElementById('question-container');
+            const qData = questions[currentQuestionIndex];
+            
+            // 更新进度条
+            const progress = ((currentQuestionIndex) / questions.length) * 100;
+            document.getElementById('progress').style.width = `${progress}%`;
+
+            // 生成HTML
+            container.innerHTML = `
+                <div class="q-count">Question ${currentQuestionIndex + 1} / ${questions.length}</div>
+                <div class="q-text">${qData.q}</div>
+                <div class="options-grid">
+                    ${qData.options.map((opt, idx) => `
+                        <div class="option-btn" onclick="selectOption(${idx})">
+                            ${opt.text}
+                        </div>
+                    `).join('')}
+                </div>
+            `;
+            
+            // 重新触发动画
+            container.classList.remove('slide-up');
+            void container.offsetWidth; // trigger reflow
+            container.classList.add('slide-up');
+        }
+
+        // 3. 选择选项
+        function selectOption(optionIndex) {
+            const qData = questions[currentQuestionIndex];
+            const score = qData.options[optionIndex].score;
+            
+            // 累加分数
+            scores[qData.type] += score;
+
+            // 下一题或结算
+            currentQuestionIndex++;
+            if (currentQuestionIndex < questions.length) {
+                renderQuestion();
+            } else {
+                showResult();
+            }
+        }
+
+        // 4. 显示结果
+        function showResult() {
+            document.getElementById('quiz-screen').classList.add('hidden');
+            document.getElementById('result-screen').classList.remove('hidden');
+
+            // 计算最高分
+            let maxScore = -1;
+            let dominantSin = '';
+            
+            for (const [sin, score] of Object.entries(scores)) {
+                if (score > maxScore) {
+                    maxScore = score;
+                    dominantSin = sin;
+                }
+            }
+            
+            // 防止全0分的情况（默认给傲慢）
+            if (maxScore === 0) dominantSin = 'sloth'; 
+
+            const resultData = resultsData[dominantSin];
+
+            // 填充文本
+            document.documentElement.style.setProperty('--accent-color', resultData.color);
+            document.getElementById('result-title').innerText = resultData.title;
+            document.getElementById('result-desc').innerText = resultData.desc;
+            document.getElementById('result-badge').style.color = resultData.color;
+            document.getElementById('result-badge').style.borderColor = resultData.color;
+            
+            // 填充救赎卡片
+            document.getElementById('virtue-title').innerText = resultData.virtueTitle;
+            document.getElementById('virtue-desc').innerText = resultData.virtueDesc;
+
+            // 绘制雷达图
+            renderChart();
+        }
+
+        function renderChart() {
+            const ctx = document.getElementById('radarChart').getContext('2d');
+            
+            // 准备数据顺序
+            const labels = ["傲慢", "嫉妒", "暴怒", "懒惰", "贪婪", "暴食", "色欲"];
+            const dataValues = [
+                scores.pride, scores.envy, scores.wrath, 
+                scores.sloth, scores.greed, scores.gluttony, scores.lust
+            ];
+
+            new Chart(ctx, {
+                type: 'radar',
+                data: {
+                    labels: labels,
+                    datasets: [{
+                        label: '罪恶值',
+                        data: dataValues,
+                        backgroundColor: 'rgba(255, 255, 255, 0.2)',
+                        borderColor: '#fff',
+                        pointBackgroundColor: '#fff',
+                        borderWidth: 2,
+                        pointRadius: 3
+                    }]
+                },
+                options: {
+                    scales: {
+                        r: {
+                            angleLines: { color: 'rgba(255, 255, 255, 0.1)' },
+                            grid: { color: 'rgba(255, 255, 255, 0.1)' },
+                            pointLabels: {
+                                color: '#ccc',
+                                font: { size: 12 }
+                            },
+                            ticks: { display: false, backdropColor: 'transparent' },
+                            suggestedMin: 0,
+                            suggestedMax: 15 // 每项最高3题*5分=15分
+                        }
+                    },
+                    plugins: {
+                        legend: { display: false }
+                    },
+                    maintainAspectRatio: false
+                }
+            });
+        }
+// --- 新增：H5 分享功能 ---
+        async function shareResult() {
+            const shareData = {
+                title: '七宗罪灵魂原罪测试',
+                text: '我刚刚测出了我的灵魂原罪，你也来试试？',
+                url: window.location.href
+            };
+
+            // 1. 尝试调用手机原生分享菜单 (iOS/Android)
+            if (navigator.share) {
+                try {
+                    await navigator.share(shareData);
+                } catch (err) {
+                    console.log('分享取消'); // 用户取消分享
+                }
+            } else {
+                // 2. 电脑端或不支持的浏览器：自动复制链接
+                const input = document.createElement('input');
+                document.body.appendChild(input);
+                input.value = window.location.href;
+                input.select();
+                
+                try {
+                    document.execCommand('copy');
+                    // 按钮变字提示
+                    const btn = document.querySelector('.share-btn');
+                    const originalText = btn.innerText;
+                    btn.innerText = "链接已复制！";
+                    btn.style.borderColor = "#2ecc71"; // 变绿提示成功
+                    btn.style.color = "#2ecc71";
+                    
+                    setTimeout(() => {
+                        btn.innerText = originalText;
+                        btn.style.borderColor = "";
+                        btn.style.color = "";
+                    }, 2000);
+                } catch (e) {
+                    alert("请手动复制浏览器链接分享");
+                }
+                
+                document.body.removeChild(input);
+            }
+        }
+    </script>
+</body>
+</html>
